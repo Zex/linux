@@ -29,7 +29,6 @@
 #include "ccp-dev.h"
 
 struct ccp_platform {
-	int use_acpi;
 	int coherent;
 };
 
@@ -95,7 +94,6 @@ static int ccp_platform_probe(struct platform_device *pdev)
 	struct ccp_device *ccp;
 	struct ccp_platform *ccp_platform;
 	struct device *dev = &pdev->dev;
-	struct acpi_device *adev = ACPI_COMPANION(dev);
 	struct resource *ior;
 	int ret;
 
@@ -111,8 +109,6 @@ static int ccp_platform_probe(struct platform_device *pdev)
 	ccp->dev_specific = ccp_platform;
 	ccp->get_irq = ccp_get_irqs;
 	ccp->free_irq = ccp_free_irqs;
-
-	ccp_platform->use_acpi = (!adev || acpi_disabled) ? 0 : 1;
 
 	ior = ccp_find_mmio_area(ccp);
 	ccp->io_map = devm_ioremap_resource(dev, ior);
@@ -216,6 +212,7 @@ static const struct acpi_device_id ccp_acpi_match[] = {
 	{ "AMDI0C00", 0 },
 	{ },
 };
+MODULE_DEVICE_TABLE(acpi, ccp_acpi_match);
 #endif
 
 #ifdef CONFIG_OF
@@ -223,11 +220,12 @@ static const struct of_device_id ccp_of_match[] = {
 	{ .compatible = "amd,ccp-seattle-v1a" },
 	{ },
 };
+MODULE_DEVICE_TABLE(of, ccp_of_match);
 #endif
 
 static struct platform_driver ccp_platform_driver = {
 	.driver = {
-		.name = "AMD Cryptographic Coprocessor",
+		.name = "ccp",
 #ifdef CONFIG_ACPI
 		.acpi_match_table = ccp_acpi_match,
 #endif
