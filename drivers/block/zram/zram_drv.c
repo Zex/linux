@@ -894,7 +894,7 @@ out:
 /*
  * Handler function for all zram I/O requests.
  */
-static void zram_make_request(struct request_queue *queue, struct bio *bio)
+static blk_qc_t zram_make_request(struct request_queue *queue, struct bio *bio)
 {
 	struct zram *zram = queue->queuedata;
 
@@ -911,11 +911,12 @@ static void zram_make_request(struct request_queue *queue, struct bio *bio)
 
 	__zram_make_request(zram, bio);
 	zram_meta_put(zram);
-	return;
+	return BLK_QC_T_NONE;
 put_zram:
 	zram_meta_put(zram);
 error:
 	bio_io_error(bio);
+	return BLK_QC_T_NONE;
 }
 
 static void zram_slot_free_notify(struct block_device *bdev,
@@ -1324,7 +1325,6 @@ static int zram_remove(struct zram *zram)
 
 	pr_info("Removed device: %s\n", zram->disk->disk_name);
 
-	idr_remove(&zram_index_idr, zram->disk->first_minor);
 	blk_cleanup_queue(zram->disk->queue);
 	del_gendisk(zram->disk);
 	put_disk(zram->disk);
@@ -1366,10 +1366,12 @@ static ssize_t hot_remove_store(struct class *class,
 	mutex_lock(&zram_index_mutex);
 
 	zram = idr_find(&zram_index_idr, dev_id);
-	if (zram)
+	if (zram) {
 		ret = zram_remove(zram);
-	else
+		idr_remove(&zram_index_idr, dev_id);
+	} else {
 		ret = -ENODEV;
+	}
 
 	mutex_unlock(&zram_index_mutex);
 	return ret ? ret : count;

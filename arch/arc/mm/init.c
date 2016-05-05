@@ -13,6 +13,7 @@
 #ifdef CONFIG_BLK_DEV_INITRD
 #include <linux/initrd.h>
 #endif
+#include <linux/of_fdt.h>
 #include <linux/swap.h>
 #include <linux/module.h>
 #include <linux/highmem.h>
@@ -51,7 +52,9 @@ void __init early_init_dt_add_memory_arch(u64 base, u64 size)
 	int in_use = 0;
 
 	if (!low_mem_sz) {
-		BUG_ON(base != low_mem_start);
+		if (base != low_mem_start)
+			panic("CONFIG_LINUX_LINK_BASE != DT memory { }");
+
 		low_mem_sz = size;
 		in_use = 1;
 	} else {
@@ -133,6 +136,9 @@ void __init setup_arch_memory(void)
 	if (initrd_start)
 		memblock_reserve(__pa(initrd_start), initrd_end - initrd_start);
 #endif
+
+	early_init_fdt_reserve_self();
+	early_init_fdt_scan_reserved_mem();
 
 	memblock_dump_all();
 
